@@ -20,6 +20,8 @@ on:
         type: string
 
 env:
+  # Windows runner Python 默认 cp1252, 读被 sed 写入 CJK 版权名的 index.tis 会炸 (2026-11-08 实踩)
+  PYTHONUTF8: 1
   SCITER_RUST_VERSION: "1.75" # https://github.com/rustdesk/rustdesk/discussions/7503, also 1.78 has ABI change which causes our sciter version not working, https://blog.rust-lang.org/2024/03/30/i128-layout-update.html
   RUST_VERSION: "1.75" # sciter failed on m1 with 1.78 because of https://blog.rust-lang.org/2024/03/30/i128-layout-update.html
   MAC_RUST_VERSION: "1.81" # 1.81 is requred for macos, because of https://github.com/yury/cidre requires 1.81
