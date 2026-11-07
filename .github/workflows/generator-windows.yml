@@ -233,6 +233,10 @@ jobs:
           sed -i -e 's|Purslane Ltd|${{ env.compname }}|' ./libs/portable/Cargo.toml
           sed -i -e 's|Purslane Ltd|${{ env.compname }}|' ./res/msi/Package/License.rtf
           sed -i -e 's|Purslane Ltd|${{ env.compname }}|' ./src/main.rs
+          # MSI 数据库代码页 1252 存不下 CJK Manufacturer (WIX0311) — 切 936/2052, UI 文化保持 en-us 零翻译依赖 (2026-11-08 实踩)
+          sed -i -e 's|Codepage="1252"|Codepage="936"|' ./res/msi/Package/Language/Package.en-us.wxl
+          sed -i -e 's|"SummaryCodepage" Value="1252"|"SummaryCodepage" Value="936"|' ./res/msi/Package/Language/Package.en-us.wxl
+          sed -i -e 's|"ProductLanguage" Value="1033"|"ProductLanguage" Value="2052"|' ./res/msi/Package/Language/Package.en-us.wxl
              
       - name: change url to custom
         if: env.urlLink != 'https://rustdesk.com'
