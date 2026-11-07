@@ -237,6 +237,10 @@ jobs:
           sed -i -e 's|Codepage="1252"|Codepage="936"|' ./res/msi/Package/Language/Package.en-us.wxl
           sed -i -e 's|"SummaryCodepage" Value="1252"|"SummaryCodepage" Value="936"|' ./res/msi/Package/Language/Package.en-us.wxl
           sed -i -e 's|"ProductLanguage" Value="1033"|"ProductLanguage" Value="2052"|' ./res/msi/Package/Language/Package.en-us.wxl
+          # 二層: en-us 有两个 wxl, WixExt_en-us.wxl 无 Codepage 默认 1252 会压过 Package.en-us.wxl 的 936 (五发实踩 WIX0311 复现)
+          # 治本: Package/@Codepage 显式 936 (错误提示第一优先属性, 不依赖 wxl 加载顺序) + WixExt 补齐
+          sed -i -e 's|Language="!(loc.ProductLanguage)"|Language="!(loc.ProductLanguage)" Codepage="936"|' ./res/msi/Package/Package.wxs
+          sed -i -e 's|<WixLocalization Culture="en-us"|<WixLocalization Culture="en-us" Codepage="936"|' ./res/msi/Package/Language/WixExt_en-us.wxl
              
       - name: change url to custom
         if: env.urlLink != 'https://rustdesk.com'
