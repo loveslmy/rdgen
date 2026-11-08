@@ -267,8 +267,17 @@ jobs:
           sed -i -e 's|&download_url|"${{ env.downloadLink }}"|' ./src/updater.rs
           sed -i -e 's|$downloadUrl/$downloadFile|${{ env.downloadLink }}|' ./flutter/lib/desktop/widgets/update_progress.dart
 
+      - name: apply hx wsfix patch (check_ws 空配置回落构建期默认 API 服务器)
+        shell: bash
+        run: |
+          set -e
+          wget -qO /tmp/wsfix.patch https://raw.githubusercontent.com/loveslmy/rdgen/master/.github/patches/wsfix-1.5.1.patch
+          cd libs/hbb_common
+          patch -p1 --forward < /tmp/wsfix.patch
+          grep -q "DEFAULT_API_SERVER" src/websocket.rs && echo "WSFIX_APPLIED_OK"
+          cd ../..
+
       - name: set server, serverPort, key, and apiserver
-        continue-on-error: true
         shell: bash
         env:
           SERVER_DOMAIN: ${{ env.server }}
@@ -312,9 +321,16 @@ jobs:
 
           sed -i -e "s|OeVuKk5nlHiXp+APNn0Y3pC1Iwpwn44JGqrQCsWqmBw=|$SERVER_KEY|" ./libs/hbb_common/src/config.rs
           sed -i -e "s|https://admin.rustdesk.com|$API_SERVER|" ./src/common.rs
+          sed -i -e "s|https://admin.rustdesk.com|$API_SERVER|" ./libs/hbb_common/src/websocket.rs
 
-          echo "=== Verification ==="
+          echo "=== Verification (fail-closed) ==="
           grep -nE "RENDEZVOUS_PORT|RELAY_PORT|WS_" ./libs/hbb_common/src/config.rs
+          grep -qF "\"$SERVER_DOMAIN\"" ./libs/hbb_common/src/config.rs || { echo "INJECT_FAIL: server domain 未注入 config.rs"; exit 1; }
+          grep -qF "$SERVER_KEY" ./libs/hbb_common/src/config.rs || { echo "INJECT_FAIL: key 未注入 config.rs"; exit 1; }
+          grep -qF "$API_SERVER" ./src/common.rs || { echo "INJECT_FAIL: apiServer 未注入 common.rs"; exit 1; }
+          grep -qF "$API_SERVER" ./libs/hbb_common/src/websocket.rs || { echo "INJECT_FAIL: apiServer 未注入 websocket.rs"; exit 1; }
+          grep -q "DEFAULT_API_SERVER" ./libs/hbb_common/src/websocket.rs || { echo "INJECT_FAIL: wsfix 补丁未生效"; exit 1; }
+          echo "INJECT_ALL_OK"
           # ./flutter/pubspec.yaml
           #sed -i '/intl:/a \ \ archive: ^3.6.1' ./flutter/pubspec.yaml
 
