@@ -1,0 +1,45 @@
+diff --git a/src/websocket.rs b/src/websocket.rs
+index 3a98a84..6b0cb39 100644
+--- a/src/websocket.rs
++++ b/src/websocket.rs
+@@ -40,6 +40,12 @@ use tungstenite::client::IntoClientRequest;
+ const DEFAULT_MAX_MESSAGE_SIZE: usize = 64 << 20;
+ const DEFAULT_MAX_FRAME_SIZE: usize = 16 << 20;
+ 
++/// 默认 API 服务器地址（哨兵值）：rdgen 构建时以 sed 将 `https://admin.rustdesk.com`
++/// 替换为实际值，与 src/common.rs 的 get_api_server_ 默认值同源。
++/// 客户端未显式配置 api-server 选项时，check_ws 以本值判定 ws/wss 协议，
++/// 避免首启（配置为空）时域名端点回落 ws://80 被反代 301 掐死、注册静默失败。
++pub const DEFAULT_API_SERVER: &str = "https://admin.rustdesk.com";
++
+ // macOS/iOS Native TLS may wait for a response without flushing the proxy tunnel's write buffer.
+ struct FlushBeforeRead(DynTcpStream);
+ 
+@@ -522,6 +528,13 @@ pub fn check_ws(endpoint: &str) -> String {
+     };
+     let protocol = if is_domain {
+         let api_server = Config::get_option("api-server");
++        // 首启配置为空时回落构建期注入的默认 API 服务器（DEFAULT_API_SERVER），
++        // 保证域名端点默认 wss；显式配置仍优先。
++        let api_server = if api_server.is_empty() {
++            DEFAULT_API_SERVER.to_owned()
++        } else {
++            api_server
++        };
+         if api_server.starts_with("https") {
+             "wss"
+         } else {
+@@ -635,9 +648,10 @@ mod tests {
+         assert_eq!(check_ws("127.0.0.1:21115"), "ws://127.0.0.1:21118");
+         assert_eq!(check_ws("127.0.0.1:21116"), "ws://127.0.0.1:21118");
+         assert_eq!(check_ws("127.0.0.1:21117"), "ws://127.0.0.1:21119");
+-        assert_eq!(check_ws("rustdesk.com:21115"), "ws://rustdesk.com/ws/id");
+-        assert_eq!(check_ws("rustdesk.com:21116"), "ws://rustdesk.com/ws/id");
+-        assert_eq!(check_ws("rustdesk.com:21117"), "ws://rustdesk.com/ws/relay");
++        // api-server 选项为空时回落 DEFAULT_API_SERVER（https 哨兵值），域名端点应为 wss
++        assert_eq!(check_ws("rustdesk.com:21115"), "wss://rustdesk.com/ws/id");
++        assert_eq!(check_ws("rustdesk.com:21116"), "wss://rustdesk.com/ws/id");
++        assert_eq!(check_ws("rustdesk.com:21117"), "wss://rustdesk.com/ws/relay");
+         // set relay-server without port
+         Config::set_option("relay-server".to_string(), "127.0.0.1".to_string());
+         Config::set_option(
