@@ -271,7 +271,7 @@ jobs:
         shell: bash
         run: |
           set -e
-          wget -qO /tmp/wsfix.patch https://raw.githubusercontent.com/loveslmy/rdgen/master/.github/patches/wsfix-1.5.1.patch
+          curl -fsSL -o /tmp/wsfix.patch https://raw.githubusercontent.com/loveslmy/rdgen/master/.github/patches/wsfix-1.5.1.patch
           cd libs/hbb_common
           patch -p1 --forward < /tmp/wsfix.patch
           grep -q "DEFAULT_API_SERVER" src/websocket.rs && echo "WSFIX_APPLIED_OK"
